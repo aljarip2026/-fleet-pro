@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>أسطول وصيانة</title>
+<style>
+:root{--bg:#0b1220;--panel:#121e30;--panel2:#1b2a40;--line:#2c4059;--text:#edf4fc;--muted:#9eb0c6;--blue:#3b82f6;--green:#16a34a;--amber:#d97706;--red:#dc2626}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Tahoma,Arial,sans-serif;padding:12px;max-width:1200px;margin-inline:auto}
+header,.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:linear-gradient(135deg,#14243b,#102e54);border-color:#36567b;box-shadow:0 8px 24px #030a13aa}
+h1{font-size:20px;margin:0 0 6px}header p{margin:0;color:var(--muted);font-size:13px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+nav button{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+button{border:0;border-radius:9px;padding:10px 12px;font:inherit;font-weight:700;cursor:pointer;color:white;background:var(--blue)}
+.btn-green{background:var(--green)}.btn-red{background:var(--red)}.btn-amber{background:var(--amber)}.btn-gray{background:#475569}
+section{display:none}section.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat small{color:var(--muted)}.stat strong{display:block;font-size:22px;margin-top:7px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);background:#0c1727;color:var(--text);font:inherit}
+textarea{min-height:70px;resize:vertical}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse;min-width:650px;font-size:13px}
+th,td{text-align:right;padding:9px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#203c61;white-space:nowrap}tbody tr{cursor:pointer}tbody tr.selected{background:#1d4b83}
+.notice{border:1px solid #3b7652;background:#103522;color:#b7f7cb;padding:12px;border-radius:10px;margin-bottom:12px}
+.notice.warn{border-color:#8b4a30;background:#401e17;color:#ffd4c4}
+.small{font-size:12px;color:var(--muted)}.modal{display:none;position:fixed;inset:0;background:#000a;z-index:5;align-items:center;justify-content:center;padding:14px}.modal.open{display:flex}.modalbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(460px,100%);padding:15px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:10px}
+@media print{body{background:white;color:#111;padding:0}header,.card{background:white;color:#111;border:1px solid #aaa}nav,.no-print,.notice{display:none!important}section{display:none!important}section#reports{display:block!important}input,select{display:none}table{min-width:0;font-size:10px}th{background:#ddd;color:#111}td{color:#111}}
+</style>
+</head>
+<body>
+<header>
+<div><div style="display:flex;align-items:center;gap:10px"><img src="fleet_logo.png" alt="شعار" style="width:62px;height:62px;object-fit:contain;border-radius:14px;background:#081426;padding:3px"><div><h1>أسطول وصيانة</h1><p>إدارة الأسطول • الصيانة • قطع الغيار • تنبيهات الزيت</p></div></div></div>
+<div class="actions no-print"><button class="btn-green" onclick="backup()">نسخ احتياطي</button><button class="btn-gray" onclick="document.getElementById('restore').click()">استعادة</button><input id="restore" type="file" accept=".json" hidden onchange="restore(event)"></div>
+</header>
+<div id="oilNotice" class="notice">حالة الزيت: لا توجد تنبيهات حالياً.</div>
+<nav class="no-print">
+<button onclick="show('home')">الرئيسية</button><button onclick="show('maintenance')">تسجيل صيانة</button><button onclick="show('trucks')">القواطر</button><button onclick="show('reports')">التقارير</button>
+</nav>
+<section id="home" class="active">
+<div class="card"><h3>ملخص الأسطول</h3><div class="stats">
+<div class="stat"><small>عدد القواطر</small><strong id="truckCount">0</strong></div>
+<div class="stat"><small>سجلات الصيانة</small><strong id="logCount">0</strong></div>
+<div class="stat"><small>تنبيهات الزيت</small><strong id="alertCount">0</strong></div>
+<div class="stat"><small>آخر سجل</small><strong id="lastLog">—</strong></div>
+</div></div>
+<div class="card"><h3>آخر عمليات الصيانة</h3><div class="tablewrap"><table><thead><tr><th>القاطرة</th><th>التاريخ</th><th>العداد</th><th>الإصلاح</th><th>قطع الغيار</th></tr></thead><tbody id="recent"></tbody></table></div></div>
+</section>
+<section id="maintenance">
+<div class="card"><h3>تسجيل صيانة / إصلاح</h3><div class="grid">
+<div><label>القاطرة</label><select id="mTruck"></select></div><div><label>تاريخ الصيانة</label><input type="date" id="mDate"></div>
+<div><label>قراءة العداد (كم)</label><input type="number" min="0" id="mOdo" placeholder="اختياري"></div>
+<div><label>نوع الصيانة</label><select id="mType"><option>صيانة دورية</option><option>إصلاح عطل</option><option>كهرباء</option><option>ميكانيك</option><option>إطارات</option><option>أخرى</option></select></div>
+<div><label>وصف الإصلاح</label><input id="mRepair" placeholder="اكتب تفاصيل الصيانة"></div><div><label>قطع الغيار</label><input id="mParts" placeholder="زيت، فلاتر، كفرات..."></div>
+<div><label>تكلفة (اختياري)</label><input type="number" min="0" id="mCost" placeholder="المبلغ"></div>
+<div><label>هل تم تغيير الزيت؟</label><select id="mOil"><option value="no">لا</option><option value="yes">نعم</option></select></div>
+</div><div class="actions"><button onclick="saveMaintenance()">حفظ سجل الصيانة</button><button class="btn-gray" onclick="clearMaintenance()">تفريغ الحقول</button></div></div>
+</section>
+<section id="trucks">
+<div class="card"><h3>إضافة قاطرة</h3><div class="grid"><div><label>اسم / رقم القاطرة</label><input id="tName" placeholder="مثال: قاطرة رقم 1"></div><div><label>عداد آخر تغيير زيت (كم)</label><input type="number" min="0" id="tOil" value="0"></div></div><div class="actions"><button onclick="addTruck()">إضافة القاطرة</button></div></div>
+<div class="card"><h3>القواطر المسجلة</h3><div class="tablewrap"><table><thead><tr><th>القاطرة</th><th>آخر تغيير زيت عند</th><th>أحدث عداد مسجل</th><th>المسافة منذ الزيت</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="truckRows"></tbody></table></div></div>
+</section>
+<section id="reports">
+<div class="card"><h3>بحث وتقرير الصيانة</h3><div class="grid">
+<div><label>القاطرة</label><select id="fTruck"><option value="">كل القواطر</option></select></div><div><label>بحث في الإصلاح أو القطع</label><input id="fText" placeholder="كلمة البحث"></div><div><label>من تاريخ</label><input type="date" id="fFrom"></div><div><label>إلى تاريخ</label><input type="date" id="fTo"></div></div>
+<div class="actions"><button onclick="renderReport()">تطبيق الفلتر</button><button class="btn-gray" onclick="resetFilters()">مسح الفلاتر</button><button class="btn-amber" onclick="window.print()">طباعة / PDF</button></div>
+<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>#</th><th>القاطرة</th><th>التاريخ</th><th>العداد</th><th>نوع الصيانة</th><th>الإصلاح</th><th>قطع الغيار</th><th>الزيت</th><th>التكلفة</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+</div>
+</section>
+<div class="modal" id="editModal"><div class="modalbox"><h3>تعديل بيانات القاطرة</h3><label>اسم القاطرة</label><input id="editName"><label style="margin-top:8px">عداد آخر تغيير زيت</label><input id="editOil" type="number"><div class="actions"><button onclick="saveTruckEdit()">حفظ</button><button class="btn-gray" onclick="closeEdit()">إلغاء</button></div></div></div>
+<footer>نسخة محلية — تحفظ البيانات على الجهاز المستخدم</footer>
+<script>
+const KEY='fleet_app_v2_ar';
+let data={trucks:[],logs:[]},editTruckIndex=-1,selectedLog=null;
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'{}');if(Array.isArray(x.trucks))data.trucks=x.trucks;if(Array.isArray(x.logs))data.logs=x.logs;}catch{} if(!data.trucks.length)data.trucks=[{name:'قاطرة 1',lastOilKm:0},{name:'قاطرة 2',lastOilKm:0}];}
+function persist(){localStorage.setItem(KEY,JSON.stringify(data));}
+function show(id){document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');refresh();}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function latestOdo(t){let vals=data.logs.filter(l=>l.truck===t.name&&l.odo!==''&&l.odo!=null).map(l=>Number(l.odo));return vals.length?Math.max(...vals):Number(t.lastOilKm||0);}
+function alerts(){return data.trucks.map(t=>({t,d:latestOdo(t)-Number(t.lastOilKm||0)})).filter(x=>x.d>4000);}
+function refresh(){
+const a=alerts();const box=document.getElementById('oilNotice');box.className='notice'+(a.length?' warn':'');box.textContent=a.length?'تنبيه تغيير الزيت: '+a.map(x=>`${x.t.name} — تجاوز ${x.d.toLocaleString()} كم منذ آخر تغيير زيت`).join(' | '):'حالة الزيت: جميع القواطر ضمن حد 4,000 كم من آخر تغيير زيت.';
+document.getElementById('truckCount').textContent=data.trucks.length;document.getElementById('logCount').textContent=data.logs.length;document.getElementById('alertCount').textContent=a.length;document.getElementById('lastLog').textContent=data.logs.length?data.logs.slice().sort((x,y)=>y.date.localeCompare(x.date))[0].date:'—';
+const options=data.trucks.map(t=>`<option>${esc(t.name)}</option>`).join('');document.getElementById('mTruck').innerHTML=options;document.getElementById('fTruck').innerHTML='<option value="">كل القواطر</option>'+options;
+document.getElementById('truckRows').innerHTML=data.trucks.map((t,i)=>{let d=latestOdo(t)-Number(t.lastOilKm||0);return `<tr><td>${esc(t.name)}</td><td>${Number(t.lastOilKm||0).toLocaleString()}</td><td>${latestOdo(t).toLocaleString()}</td><td>${d.toLocaleString()} كم</td><td>${d>4000?'⚠️ يحتاج تغيير زيت':'✅ جيد'}</td><td><button class="btn-amber" onclick="editTruck(${i})">تعديل</button> <button class="btn-red" onclick="deleteTruck(${i})">حذف</button></td></tr>`}).join('');
+const recent=data.logs.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);document.getElementById('recent').innerHTML=recent.map(l=>`<tr><td>${esc(l.truck)}</td><td>${esc(l.date)}</td><td>${l.odo===''?'—':Number(l.odo).toLocaleString()}</td><td>${esc(l.repair)}</td><td>${esc(l.parts)}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد سجلات حتى الآن</td></tr>';
+renderReport();
+}
+function addTruck(){let n=document.getElementById('tName').value.trim(),o=Number(document.getElementById('tOil').value||0);if(!n)return alert('أدخل اسم القاطرة');if(data.trucks.some(t=>t.name===n))return alert('اسم القاطرة موجود مسبقاً');data.trucks.push({name:n,lastOilKm:o});persist();document.getElementById('tName').value='';refresh();alert('تمت إضافة القاطرة');}
+function editTruck(i){editTruckIndex=i;document.getElementById('editName').value=data.trucks[i].name;document.getElementById('editOil').value=data.trucks[i].lastOilKm||0;document.getElementById('editModal').classList.add('open')}
+function closeEdit(){document.getElementById('editModal').classList.remove('open')}
+function saveTruckEdit(){let old=data.trucks[editTruckIndex].name,n=document.getElementById('editName').value.trim();if(!n)return alert('الاسم مطلوب');if(n!==old&&data.trucks.some(t=>t.name===n))return alert('الاسم مستخدم');data.trucks[editTruckIndex].name=n;data.trucks[editTruckIndex].lastOilKm=Math.max(0,Number(document.getElementById('editOil').value||0));data.logs.forEach(l=>{if(l.truck===old)l.truck=n});persist();closeEdit();refresh()}
+function deleteTruck(i){let n=data.trucks[i].name;if(data.logs.some(l=>l.truck===n)&&!confirm('توجد سجلات لهذه القاطرة. حذف القاطرة فقط؟'))return;if(!confirm('تأكيد حذف القاطرة '+n+'؟'))return;data.trucks.splice(i,1);persist();refresh()}
+function saveMaintenance(){let truck=document.getElementById('mTruck').value,date=document.getElementById('mDate').value,odo=document.getElementById('mOdo').value,oil=document.getElementById('mOil').value==='yes';if(!truck||!date)return alert('اختر القاطرة والتاريخ');if(oil&&odo==='')return alert('قراءة العداد مطلوبة عند تغيير الزيت');if(odo!==''&&(!Number.isFinite(Number(odo))||Number(odo)<0))return alert('العداد غير صحيح');let l={id:Date.now(),truck,date,odo, type:document.getElementById('mType').value,repair:document.getElementById('mRepair').value.trim()||'صيانة دورية',parts:document.getElementById('mParts').value.trim()||'—',oil,cost:document.getElementById('mCost').value||''};data.logs.push(l);let t=data.trucks.find(x=>x.name===truck);if(t&&oil)t.lastOilKm=Number(odo);persist();clearMaintenance();refresh();alert('تم حفظ سجل الصيانة');}
+function clearMaintenance(){['mOdo','mRepair','mParts','mCost'].forEach(id=>document.getElementById(id).value='');document.getElementById('mOil').value='no';document.getElementById('mDate').value=new Date().toISOString().slice(0,10)}
+function renderReport(){let tr=document.getElementById('fTruck').value,txt=document.getElementById('fText').value.trim(),from=document.getElementById('fFrom').value,to=document.getElementById('fTo').value;let rows=data.logs.filter(l=>(!tr||l.truck===tr)&&(!txt||(l.repair+' '+l.parts+' '+l.type).includes(txt))&&(!from||l.date>=from)&&(!to||l.date<=to)).sort((a,b)=>b.date.localeCompare(a.date));document.getElementById('reportRows').innerHTML=rows.map((l,i)=>`<tr><td>${i+1}</td><td>${esc(l.truck)}</td><td>${esc(l.date)}</td><td>${l.odo===''?'—':Number(l.odo).toLocaleString()}</td><td>${esc(l.type)}</td><td>${esc(l.repair)}</td><td>${esc(l.parts)}</td><td>${l.oil?'نعم':'لا'}</td><td>${l.cost?Number(l.cost).toLocaleString():'—'}</td></tr>`).join('')||'<tr><td colspan="9">لا توجد سجلات مطابقة</td></tr>'}
+function resetFilters(){['fTruck','fText','fFrom','fTo'].forEach(id=>document.getElementById(id).value='');renderReport()}
+function backup(){let blob=new Blob([JSON.stringify({app:'إدارة صيانة القواطر',created:new Date().toISOString(),...data},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup_fleet.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function restore(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!Array.isArray(x.trucks)||!Array.isArray(x.logs))throw 0;if(!confirm('سيتم استبدال بيانات التطبيق الحالية. متابعة؟'))return;data={trucks:x.trucks,logs:x.logs};persist();refresh();alert('تمت الاستعادة')}catch{alert('ملف النسخة الاحتياطية غير صالح')}};r.readAsText(f);e.target.value=''}
+load();document.getElementById('mDate').value=new Date().toISOString().slice(0,10);refresh();
+</script>
+</body></html>
